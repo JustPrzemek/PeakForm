@@ -2,14 +2,25 @@
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        email VARCHAR(255) UNIQUE NOT NULL,
-                       password_hash VARCHAR(255) NOT NULL,
+                       password_hash VARCHAR(255),
                        username VARCHAR(100) NOT NULL,
                        age INT CHECK (age > 0),
                        weight FLOAT CHECK (weight > 0),
                        height FLOAT CHECK (height > 0),
                        goal VARCHAR(50) CHECK (goal IN ('reduction', 'bulk', 'maintenance')),
-                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       provider VARCHAR(50),
+                       provider_id VARCHAR(100),
+                       email_verified BOOLEAN DEFAULT false,
+
+                       CONSTRAINT auth_method_check CHECK (
+                           (password_hash IS NOT NULL) OR
+                           (provider IS NOT NULL AND provider_id IS NOT NULL)
+                           )
 );
+
+CREATE UNIQUE INDEX idx_provider_unique ON users (provider, provider_id)
+    WHERE provider IS NOT NULL AND provider_id IS NOT NULL;
 
 
 CREATE TABLE meals (
