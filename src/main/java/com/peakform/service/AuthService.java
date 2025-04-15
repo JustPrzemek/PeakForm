@@ -2,72 +2,140 @@ package com.peakform.service;
 
 import com.peakform.dto.AuthResponse;
 import com.peakform.dto.LoginRequest;
-import com.peakform.dto.UserRegistrationDto;
-import com.peakform.exception.AuthException;
+import com.peakform.dto.RegistrationRequest;
+import com.peakform.dto.UserDto;
+import com.peakform.exception.BadRequestException;
+import com.peakform.exception.ResourceNotFoundException;
 import com.peakform.model.User;
 import com.peakform.repository.UserRepository;
-import com.peakform.security.UserPrincipal;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.peakform.security.jwt.JwtTokenProvider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
 
-    @Autowired
-    public AuthService(
-            UserRepository userRepository,
-            JwtService jwtService,
-            AuthenticationManager authenticationManager,
-            PasswordEncoder passwordEncoder
-    ) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
-        this.jwtService = jwtService;
-        this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.authenticationManager = authenticationManager;
     }
 
-    public AuthResponse registerUser(UserRegistrationDto request) {
+    public AuthResponse register(RegistrationRequest request) {
+        // Check if email is already in use
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new AuthException("Email already exists");
+            throw new BadRequestException("Email already in use");
         }
 
-        User user = User.builder()
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .username(request.getUsername())
-                .age(request.getAge())
-                .weight(request.getWeight())
-                .height(request.getHeight())
-                .goal(request.getGoal())
-                .emailVerified(false)
-                .build();
+        // Create new user
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setUsername(request.getUsername());
+        user.setAge(request.getAge());
+        user.setWeight(request.getWeight());
+        user.setHeight(request.getHeight());
+        user.setGoal(request.getGoal());
+        user.setAuthProvider("local");
+        user.setRole("USER");
+        user.setEnabled(true);
+        user.setCreatedAt(LocalDateTime.now());
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        String jwtToken = jwtService.generateToken(UserPrincipal.create(user));
-        return new AuthResponse(jwtToken);
+        // Generate tokens
+        String token = jwtTokenProvider.generateTokenWithId(
+                savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getEmail());
+
+        // Save refresh token
+        savedUser.setRefreshToken(refreshToken);
+        userRepository.save(savedUser);
+
+        return new AuthResponse(token, refreshToken, savedUser.getId(), savedUser.getUsername());
     }
 
-    public AuthResponse loginUser(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
+    public AuthResponse login(LoginRequest request) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AuthException("User not found"));
 
-        String jwtToken = jwtService.generateToken(UserPrincipal.create(user));
-        return new AuthResponse(jwtToken);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Get user details
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getEmail()));
+
+        // Generate tokens
+        String token = jwtTokenProvider.generateToken(authentication);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        // Save refresh token
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
+        return new AuthResponse(token, refreshToken, user.getId(), user.getUsername());
+    }
+
+    public UserDto getCurrentUser(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            String email = jwtTokenProvider.getUsernameFromToken(token);
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+            return new UserDto(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getUsername(),
+                    user.getAge(),
+                    user.getWeight(),
+                    user.getHeight(),
+                    user.getGoal(),
+                    user.getRole()
+            );
+        }
+        throw new BadRequestException("Authorization header must start with Bearer");
+    }
+
+    public AuthResponse refreshToken(String refreshToken) {
+        // Validate refresh token
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new BadRequestException("Invalid refresh token");
+        }
+
+        String email = jwtTokenProvider.getUsernameFromToken(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        // Check if the refresh token matches the stored one
+        if (!refreshToken.equals(user.getRefreshToken())) {
+            throw new BadRequestException("Refresh token does not match");
+        }
+
+        // Generate new tokens
+        String newToken = jwtTokenProvider.generateTokenWithId(
+                user.getId(), user.getEmail(), user.getRole());
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        // Save new refresh token
+        user.setRefreshToken(newRefreshToken);
+        userRepository.save(user);
+
+        return new AuthResponse(newToken, newRefreshToken, user.getId(), user.getUsername());
     }
 }

@@ -9,19 +9,16 @@ CREATE TABLE users (
                        height FLOAT CHECK (height > 0),
                        goal VARCHAR(50) CHECK (goal IN ('reduction', 'bulk', 'maintenance')),
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       provider VARCHAR(50),
-                       provider_id VARCHAR(100),
-                       email_verified BOOLEAN DEFAULT false,
+                       auth_provider VARCHAR(20) DEFAULT 'local',
+                       provider_id VARCHAR(255),
+                       refresh_token VARCHAR(255),
+                       role VARCHAR(20) DEFAULT 'USER',
+                       is_enabled BOOLEAN DEFAULT true
 
-                       CONSTRAINT auth_method_check CHECK (
-                           (password_hash IS NOT NULL) OR
-                           (provider IS NOT NULL AND provider_id IS NOT NULL)
-                           )
 );
 
-CREATE UNIQUE INDEX idx_provider_unique ON users (provider, provider_id)
-    WHERE provider IS NOT NULL AND provider_id IS NOT NULL;
-
+CREATE UNIQUE INDEX idx_provider_id ON users (auth_provider, provider_id)
+    WHERE auth_provider != 'local' AND provider_id IS NOT NULL;
 
 CREATE TABLE meals (
                        id SERIAL PRIMARY KEY,
