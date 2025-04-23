@@ -9,6 +9,8 @@ import com.peakform.exception.ResourceNotFoundException;
 import com.peakform.model.User;
 import com.peakform.repository.UserRepository;
 import com.peakform.security.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,30 +19,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.authenticationManager = authenticationManager;
-    }
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     public AuthResponse register(RegistrationRequest request) {
-        // Check if email is already in use
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email already in use");
         }
 
-        // Create new user
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -51,21 +49,53 @@ public class AuthService {
         user.setGoal(request.getGoal());
         user.setAuthProvider("local");
         user.setRole("USER");
-        user.setEnabled(true);
+        user.setEnabled(false);
+        user.setEmailVerified(false);
         user.setCreatedAt(LocalDateTime.now());
+
+        String verificationToken = UUID.randomUUID().toString();
+        user.setEmailVerificationToken(verificationToken);
 
         User savedUser = userRepository.save(user);
 
-        // Generate tokens
-        String token = jwtTokenProvider.generateTokenWithId(
-                savedUser.getId(), savedUser.getEmail(), savedUser.getRole());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getEmail());
+        String verificationUrl = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
+        emailService.sendVerificationEmail(savedUser, verificationUrl);
 
-        // Save refresh token
-        savedUser.setRefreshToken(refreshToken);
-        userRepository.save(savedUser);
+        return new AuthResponse(null, null, savedUser.getId(), savedUser.getUsername());
+    }
 
-        return new AuthResponse(token, refreshToken, savedUser.getId(), savedUser.getUsername());
+    public void verifyEmail(String token) {
+        User user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new BadRequestException("Invalid verification token"));
+
+        user.setEmailVerificationToken(null);
+        user.setEmailVerified(true);
+        user.setEnabled(true);
+        userRepository.save(user);
+    }
+
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        String resetToken = UUID.randomUUID().toString();
+        user.setPasswordResetToken(resetToken);
+        user.setPasswordResetExpires(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        String resetUrl = baseUrl + "/api/auth/reset-password?token=" + resetToken;
+        emailService.sendPasswordResetEmail(user, resetUrl);
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByPasswordResetToken(token)
+                .filter(u -> u.getPasswordResetExpires().isAfter(LocalDateTime.now()))
+                .orElseThrow(() -> new BadRequestException("Invalid or expired reset token"));
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetExpires(null);
+        userRepository.save(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -75,15 +105,12 @@ public class AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Get user details
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", request.getEmail()));
 
-        // Generate tokens
         String token = jwtTokenProvider.generateToken(authentication);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
 
-        // Save refresh token
         user.setRefreshToken(refreshToken);
         userRepository.save(user);
 
@@ -113,7 +140,6 @@ public class AuthService {
     }
 
     public AuthResponse refreshToken(String refreshToken) {
-        // Validate refresh token
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new BadRequestException("Invalid refresh token");
         }
@@ -122,17 +148,14 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
 
-        // Check if the refresh token matches the stored one
         if (!refreshToken.equals(user.getRefreshToken())) {
             throw new BadRequestException("Refresh token does not match");
         }
 
-        // Generate new tokens
         String newToken = jwtTokenProvider.generateTokenWithId(
                 user.getId(), user.getEmail(), user.getRole());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
 
-        // Save new refresh token
         user.setRefreshToken(newRefreshToken);
         userRepository.save(user);
 

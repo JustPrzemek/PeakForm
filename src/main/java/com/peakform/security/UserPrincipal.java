@@ -1,6 +1,9 @@
 package com.peakform.security;
 
 import com.peakform.model.User;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,21 +14,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@Data
+@RequiredArgsConstructor
 public class UserPrincipal implements UserDetails, OAuth2User {
-    private Long id;
-    private String email;
-    private String password;
-    private String username;
-    private Collection<? extends GrantedAuthority> authorities;
+    private final Long id;
+    private final String email;
+    private final String password;
+    private final String username;
+    private final boolean emailVerified;
+    private final Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
-
-    public UserPrincipal(Long id, String email, String password, String username, Collection<? extends GrantedAuthority> authorities) {
-        this.id = id;
-        this.email = email;
-        this.password = password;
-        this.username = username;
-        this.authorities = authorities;
-    }
 
     public static UserPrincipal create(User user) {
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
@@ -35,6 +33,7 @@ public class UserPrincipal implements UserDetails, OAuth2User {
                 user.getEmail(),
                 user.getPasswordHash(),
                 user.getUsername(),
+                user.isEmailVerified(),
                 authorities
         );
     }
@@ -45,19 +44,6 @@ public class UserPrincipal implements UserDetails, OAuth2User {
         return userPrincipal;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
     @Override
     public String getUsername() {
         return email;
@@ -65,11 +51,6 @@ public class UserPrincipal implements UserDetails, OAuth2User {
 
     public String getDisplayName() {
         return username;
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
     }
 
     @Override
@@ -89,16 +70,12 @@ public class UserPrincipal implements UserDetails, OAuth2User {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.emailVerified;
     }
 
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
-    }
-
-    public void setAttributes(Map<String, Object> attributes) {
-        this.attributes = attributes;
     }
 
     @Override

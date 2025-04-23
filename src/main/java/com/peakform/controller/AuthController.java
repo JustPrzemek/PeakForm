@@ -71,4 +71,27 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refreshToken(@RequestParam String refreshToken) {
         return ResponseEntity.ok(authService.refreshToken(refreshToken));
     }
+
+    @GetMapping("/verify-email")
+    @Operation(summary = "Verify email", description = "Verifies user's email using verification token")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok("Email verified successfully");
+    }
+
+    @PostMapping("/request-password-reset")
+    @Operation(summary = "Request password reset", description = "Sends password reset link to user's email")
+    public ResponseEntity<String> requestPasswordReset(@RequestParam String email) {
+        authService.requestPasswordReset(email);
+        return ResponseEntity.ok("Password reset link sent to email");
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password", description = "Resets user's password using reset token")
+    public ResponseEntity<String> resetPassword(
+            @RequestParam String token,
+            @RequestParam String newPassword) {
+        authService.resetPassword(token, newPassword);
+        return ResponseEntity.ok("Password reset successfully");
+    }
 }

@@ -7,7 +7,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -38,114 +42,28 @@ public class User {
     @Column(name = "refresh_token")
     private String refreshToken;
 
+    @Getter
     private String role = "USER";
 
     @Column(name = "is_enabled")
-    private boolean isEnabled = true;
+    private boolean isEnabled = false;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Constructors
-    public User() {
-    }
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
+    @Column(name = "is_email_verified")
+    private boolean isEmailVerified = false;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
 
-    public String getEmail() {
-        return email;
-    }
+    @Column(name = "password_reset_expires")
+    private LocalDateTime passwordResetExpires;
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public Integer getAge() {
-        return age;
-    }
-
-    public void setAge(Integer age) {
-        this.age = age;
-    }
-
-    public Float getWeight() {
-        return weight;
-    }
-
-    public void setWeight(Float weight) {
-        this.weight = weight;
-    }
-
-    public Float getHeight() {
-        return height;
-    }
-
-    public void setHeight(Float height) {
-        this.height = height;
-    }
-
-    public String getGoal() {
-        return goal;
-    }
-
-    public void setGoal(String goal) {
-        this.goal = goal;
-    }
-
-    public String getAuthProvider() {
-        return authProvider;
-    }
-
-    public void setAuthProvider(String authProvider) {
-        this.authProvider = authProvider;
-    }
-
-    public String getProviderId() {
-        return providerId;
-    }
-
-    public void setProviderId(String providerId) {
-        this.providerId = providerId;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
 
     public boolean isEnabled() {
         return isEnabled;
@@ -155,11 +73,11 @@ public class User {
         isEnabled = enabled;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public boolean isEmailVerified() {
+        return isEmailVerified;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setEmailVerified(boolean emailVerified) {
+        isEmailVerified = emailVerified;
     }
 }

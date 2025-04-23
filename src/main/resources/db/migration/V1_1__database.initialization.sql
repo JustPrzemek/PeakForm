@@ -13,7 +13,11 @@ CREATE TABLE users (
                        provider_id VARCHAR(255),
                        refresh_token VARCHAR(255),
                        role VARCHAR(20) DEFAULT 'USER',
-                       is_enabled BOOLEAN DEFAULT true
+                       is_enabled BOOLEAN DEFAULT true,
+                       email_verification_token VARCHAR(255),
+                       is_email_verified BOOLEAN DEFAULT false,
+                       password_reset_token VARCHAR(255),
+                       password_reset_expires TIMESTAMP
 
 );
 
