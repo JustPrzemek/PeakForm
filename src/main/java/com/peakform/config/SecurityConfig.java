@@ -6,6 +6,7 @@ import com.peakform.security.jwt.JwtTokenProvider;
 import com.peakform.security.oauth2.OAuth2AuthenticationFailureHandler;
 import com.peakform.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.peakform.security.oauth2.OAuth2UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,6 +32,7 @@ import java.util.Arrays;
         securedEnabled = true,
         jsr250Enabled = true
 )
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
@@ -38,19 +40,6 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final JwtTokenProvider jwtTokenProvider;
-
-    public SecurityConfig(
-            CustomUserDetailsService userDetailsService,
-            OAuth2UserService oAuth2UserService,
-            OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-            OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler,
-            JwtTokenProvider jwtTokenProvider) {
-        this.userDetailsService = userDetailsService;
-        this.oAuth2UserService = oAuth2UserService;
-        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
-        this.oAuth2AuthenticationFailureHandler = oAuth2AuthenticationFailureHandler;
-        this.jwtTokenProvider = jwtTokenProvider;
-    }
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -70,7 +59,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*")); // Customize as needed
+        configuration.setAllowedOrigins(Arrays.asList("localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
@@ -88,14 +77,6 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/"),
-                                AntPathRequestMatcher.antMatcher("/favicon.ico"),
-                                AntPathRequestMatcher.antMatcher("/**/*.png"),
-                                AntPathRequestMatcher.antMatcher("/**/*.gif"),
-                                AntPathRequestMatcher.antMatcher("/**/*.svg"),
-                                AntPathRequestMatcher.antMatcher("/**/*.jpg"),
-                                AntPathRequestMatcher.antMatcher("/**/*.html"),
-                                AntPathRequestMatcher.antMatcher("/**/*.css"),
-                                AntPathRequestMatcher.antMatcher("/**/*.js"),
                                 AntPathRequestMatcher.antMatcher("/api/auth/**"),
                                 AntPathRequestMatcher.antMatcher("/oauth2/**"),
                                 AntPathRequestMatcher.antMatcher("/swagger-ui.html"),
@@ -103,7 +84,6 @@ public class SecurityConfig {
                                 AntPathRequestMatcher.antMatcher("/v3/api-docs/**"),
                                 AntPathRequestMatcher.antMatcher("/swagger-ui**"),
                                 AntPathRequestMatcher.antMatcher("/swagger-ui/index.html"),
-                                AntPathRequestMatcher.antMatcher("/webjars/**"),
                                 AntPathRequestMatcher.antMatcher("/swagger-resources/**"),
                                 AntPathRequestMatcher.antMatcher("/swagger-resources")).permitAll()
                         .anyRequest().authenticated()
@@ -116,7 +96,6 @@ public class SecurityConfig {
                         .failureHandler(oAuth2AuthenticationFailureHandler)
                 );
 
-        // Add our custom JWT security filter
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -1,17 +1,14 @@
 package com.peakform.security.oauth2;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 import java.util.Map;
 
+@Data
+@AllArgsConstructor
 public abstract class OAuth2UserInfo {
     protected Map<String, Object> attributes;
-
-    public OAuth2UserInfo(Map<String, Object> attributes) {
-        this.attributes = attributes;
-    }
-
-    public Map<String, Object> getAttributes() {
-        return attributes;
-    }
 
     public abstract String getId();
 

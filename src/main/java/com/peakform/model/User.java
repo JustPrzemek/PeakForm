@@ -1,7 +1,18 @@
 package com.peakform.model;
 
-import jakarta.persistence.*;
-import lombok.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -25,12 +36,16 @@ public class User {
     @Column(nullable = false)
     private String username;
 
+    @Positive
     private Integer age;
 
+    @Positive
     private Float weight;
 
+    @Positive
     private Float height;
 
+    @Pattern(regexp = "reduction|bulk|maintenance")
     private String goal;
 
     @Column(name = "auth_provider")
@@ -42,13 +57,14 @@ public class User {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-    @Getter
+    @Column(name = "role")
     private String role = "USER";
 
     @Column(name = "is_enabled")
-    private boolean isEnabled = false;
+    private boolean isEnabled = true;
 
     @Column(name = "created_at")
+    @ColumnDefault("CURRENT_TIMESTAMP")
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "email_verification_token")
@@ -63,21 +79,4 @@ public class User {
     @Column(name = "password_reset_expires")
     private LocalDateTime passwordResetExpires;
 
-
-
-    public boolean isEnabled() {
-        return isEnabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        isEnabled = enabled;
-    }
-
-    public boolean isEmailVerified() {
-        return isEmailVerified;
-    }
-
-    public void setEmailVerified(boolean emailVerified) {
-        isEmailVerified = emailVerified;
-    }
 }

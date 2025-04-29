@@ -21,12 +21,12 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Fitness Application API")
+                        .title("Fitness Application API 'PEAKFORM'")
                         .description("API for managing users, meals, exercises, workout plans, and social interactions in a fitness application")
                         .version("1.0.0")
                         .contact(new Contact()
-                                .name("Fitness App Team")
-                                .email("support@fitnessapp.com"))
+                                .name("PeakForm Team")
+                                .email("peakformteam@gmail.com"))
                         .license(new License().name("MIT License").url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server().url("/").description("Default Server URL")))
