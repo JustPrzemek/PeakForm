@@ -72,6 +72,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         user.setRole("USER");
         user.setEnabled(true);
         user.setCreatedAt(LocalDateTime.now());
+        user.setEmailVerified(true);
 
         return userRepository.save(user);
     }
