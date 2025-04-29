@@ -2,15 +2,27 @@
 CREATE TABLE users (
                        id SERIAL PRIMARY KEY,
                        email VARCHAR(255) UNIQUE NOT NULL,
-                       password_hash VARCHAR(255) NOT NULL,
+                       password_hash VARCHAR(255),
                        username VARCHAR(100) NOT NULL,
                        age INT CHECK (age > 0),
                        weight FLOAT CHECK (weight > 0),
                        height FLOAT CHECK (height > 0),
                        goal VARCHAR(50) CHECK (goal IN ('reduction', 'bulk', 'maintenance')),
-                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       auth_provider VARCHAR(20) DEFAULT 'local',
+                       provider_id VARCHAR(255),
+                       refresh_token VARCHAR(255),
+                       role VARCHAR(20) DEFAULT 'USER',
+                       is_enabled BOOLEAN DEFAULT true,
+                       email_verification_token VARCHAR(255),
+                       is_email_verified BOOLEAN DEFAULT false,
+                       password_reset_token VARCHAR(255),
+                       password_reset_expires TIMESTAMP
+
 );
 
+CREATE UNIQUE INDEX idx_provider_id ON users (auth_provider, provider_id)
+    WHERE auth_provider != 'local' AND provider_id IS NOT NULL;
 
 CREATE TABLE meals (
                        id SERIAL PRIMARY KEY,
