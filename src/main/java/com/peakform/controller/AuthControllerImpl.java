@@ -5,9 +5,11 @@ import com.peakform.dto.LoginRequest;
 import com.peakform.dto.RegistrationRequest;
 import com.peakform.dto.UserDto;
 import com.peakform.service.AuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -57,5 +59,13 @@ public class AuthControllerImpl implements AuthController {
             @RequestParam String newPassword) {
         authService.resetPassword(token, newPassword);
         return ResponseEntity.ok("Password reset successfully");
+    }
+    @Override
+    public ResponseEntity<String> logout(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
+
+        authService.logout(refreshToken, response);
+        return ResponseEntity.ok("Logged out successfully");
     }
 }

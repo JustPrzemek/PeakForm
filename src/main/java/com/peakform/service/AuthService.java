@@ -9,6 +9,8 @@ import com.peakform.exception.ResourceNotFoundException;
 import com.peakform.model.User;
 import com.peakform.repository.UserRepository;
 import com.peakform.security.jwt.JwtTokenProvider;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -160,5 +162,30 @@ public class AuthService {
         userRepository.save(user);
 
         return new AuthResponse(newToken, newRefreshToken, user.getId(), user.getUsername());
+    }
+
+    public void logout(String refreshToken, HttpServletResponse response) {
+        // Unieważnienie refresh tokena w bazie
+        if (refreshToken != null && jwtTokenProvider.validateToken(refreshToken)) {
+            String email = jwtTokenProvider.getUsernameFromToken(refreshToken);
+            userRepository.findByEmail(email).ifPresent(user -> {
+                user.setRefreshToken(null);
+                userRepository.save(user);
+            });
+
+            // Czyszczenie cookie
+            clearRefreshTokenCookie(response);
+        }
+
+        SecurityContextHolder.clearContext();
+    }
+
+    private void clearRefreshTokenCookie(HttpServletResponse response) {
+        Cookie cookie = new Cookie("refreshToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false); // Na produkcji ustaw na true
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
     }
 }
