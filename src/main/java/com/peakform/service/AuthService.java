@@ -60,7 +60,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        String verificationUrl = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
+        String verificationUrl = "http://localhost:3000?token=" + verificationToken;
         emailService.sendVerificationEmail(savedUser, verificationUrl);
 
         return new AuthResponse(null, null, savedUser.getId(), savedUser.getUsername());
@@ -85,7 +85,7 @@ public class AuthService {
         user.setPasswordResetExpires(LocalDateTime.now().plusHours(24));
         userRepository.save(user);
 
-        String resetUrl = baseUrl + "/api/auth/reset-password?token=" + resetToken;
+        String resetUrl = "http://localhost:3000/reset-password?token=" + resetToken;
         emailService.sendPasswordResetEmail(user, resetUrl);
     }
 
